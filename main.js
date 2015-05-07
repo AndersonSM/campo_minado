@@ -10,10 +10,10 @@ $(document).ready( function() {
         tempo.setSeconds(tempo.getSeconds()+1);
         $("#tempo").text(tempo.getHours() + ":" + tempo.getMinutes() + ":" + tempo.getSeconds());
     }, 1000);
-    
+
     trocarJogador(prompt("Digite o nome do jogador:"));
-    var tam = 6;
-    var qtdMinas = 2;
+    var tam = 16;
+    var qtdMinas = 40;
     iniciaCampo(tam);
     espalharMinas();
     setTimer(tempo);
