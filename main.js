@@ -3,13 +3,21 @@
  */
 var tempo = new Date();
 var campo = [];
+var quadradosAbertos = 0;
 
 $(document).ready( function() {
-    //trocarJogador(prompt("Digite o nome do jogador:"));
-    iniciaCampo(16);
+    var atualizaTempo = setInterval(function () {
+        tempo.setSeconds(tempo.getSeconds()+1);
+        $("#tempo").text(tempo.getHours() + ":" + tempo.getMinutes() + ":" + tempo.getSeconds());
+    }, 1000);
+
+    trocarJogador(prompt("Digite o nome do jogador:"));
+    var tam = 6;
+    var qtdMinas = 2;
+    iniciaCampo(tam);
     espalharMinas();
     setTimer(tempo);
-    atualizaTempo();
+
 
 
     function iniciaCampo(tam) {
@@ -18,7 +26,7 @@ $(document).ready( function() {
             $("#campo").append("<tr id='" + i + "i'></tr>");
             campo[i] = [];
             for (j = 0; j < tam; j++) {
-                campo[i][j] = {minado: false, clicado: false};
+                campo[i][j] = {minado: false, clicado: false, adjacentes: 0, x: i, y: j};
                 $(("#" + i + "i")).append("<th class='sqr' id='" + i + "-" + j + "'></th>");
             }
         }
@@ -27,12 +35,21 @@ $(document).ready( function() {
     function espalharMinas() {
         var i;
         var j;
-        while(contarMinas() < 40){
-            i = Math.floor(Math.random() * 16);
-            j = Math.floor(Math.random() * 16);
+        while(contarMinas() < qtdMinas){
+            i = Math.floor(Math.random() * tam);
+            j = Math.floor(Math.random() * tam);
 
             if(!campo[i][j].minado){
                 campo[i][j].minado = true;
+                for (var k = i-1; k < i+2; k++) {
+                    for (var l = j-1; l < j+2; l++) {
+                        if(!(k == i && l == j)) {
+                            if(campo[k] != undefined && campo[k][l] != undefined) {
+                                campo[k][l].adjacentes++;
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -63,52 +80,95 @@ $(document).ready( function() {
         tempo.setSeconds(0);
     }
 
-    function atualizaTempo() {
-        setInterval(function () {
-            tempo.setSeconds(tempo.getSeconds()+1);
-            $("#tempo").text(tempo.getHours() + ":" + tempo.getMinutes() + ":" + tempo.getSeconds());
-        }, 1000);
-    }
-
     $(".sqr").click(function () {
         var id = $(this).attr("id");
         var idSplit = $(this).attr("id").split("-");
         var i = Number(idSplit[0]);
         var j = Number(idSplit[1]);
         var sqr = campo[i][j];
-        var qtd;
         console.log(campo[i][j]);
         if(!sqr.clicado) {
             sqr.clicado = true;
-            if (sqr.minado) {
-                $("#" + id).css('background-color', 'red');
-            } else {
-                qtd = verificaAdjacentes(i, j);
-                if(qtd > 0) {
-                    $("#" + id).append("<p>" + qtd + "</p>");
-                }
-                else{
-                    $("#" + id).css('background-color', 'gray');
-                }
-            }
+            abrirQuadrado(id,sqr);
         }
     });
 
     function verificaAdjacentes(lin, col) {
-        var qtd = 0;
         for (var i = lin-1; i < lin+2; i++) {
             for (var j = col-1; j < col+2; j++) {
                 if(!(i == lin && j == col)) {
-                    if (campo[i] != undefined && campo[i][j] != undefined) {
-                        if(campo[i][j].minado){
-                            qtd++;
-                        }
+                    if (campo[i] != undefined && campo[i][j] != undefined && !campo[i][j].clicado) {
+                        abrirQuadrado(i+"-"+j, campo[i][j]);
                     }
                 }
             }
         }
-        return qtd;
     }
 
+    function abrirQuadrado(id, sqr) {
+        var perdeu = false;
+
+        if (sqr.minado) {
+            $("#" + id).css('background-color', 'red');
+            perdeu = true;
+        } else {
+            quadradosAbertos++;
+            var qtd = sqr.adjacentes;
+            if(qtd > 0) {
+                $("#" + id).append("<p>" + qtd + "</p>");
+                sqr.clicado = true;
+            }
+            else{
+                sqr.clicado = true;
+                verificaAdjacentes(sqr.x, sqr.y);
+                $("#" + id).css('background-color', 'gray');
+            }
+        }
+        verificaFimDeJogo();
+
+        if(perdeu){
+            gameOver();
+        }
+    }
+
+    function revelaQuadrado(id, sqr) {
+        if (sqr.minado) {
+            $("#" + id).css('background-color', 'red');
+            sqr.clicado = true;
+        } else {
+            var qtd = sqr.adjacentes;
+            if(qtd > 0) {
+                $("#" + id).append("<p>" + qtd + "</p>");
+                sqr.clicado = true;
+            }
+            else{
+                $("#" + id).css('background-color', 'gray');
+                sqr.clicado = true;
+            }
+        }
+    }
+
+    function verificaFimDeJogo() {
+        if(quadradosAbertos == (tam*tam)-qtdMinas){
+            indicaVencedor();
+            clearInterval(atualizaTempo);
+        }
+    }
+
+    function indicaVencedor() {
+        alert("Parabéns, você venceu!");
+    }
+
+    function gameOver() {
+        for (var i = 0; i < tam; i++) {
+            for (var j = 0; j < tam; j++) {
+                if(!campo[i][j].clicado) {
+                    revelaQuadrado(i + "-" + j, campo[i][j]);
+                }
+            }
+        }
+        clearInterval(atualizaTempo);
+        alert("Boom! Você perdeu!");
+    }
 
 });
